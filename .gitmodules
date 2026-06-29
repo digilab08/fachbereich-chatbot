@@ -1,0 +1,6 @@
+[submodule "Moodle-DL"]
+	path = Moodle-DL
+	url = https://github.com/C0D3D3V/Moodle-DL
+[submodule "LibreChat"]
+	path = LibreChat
+	url = https://github.com/danny-avila/LibreChat
