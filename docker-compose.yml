@@ -1,0 +1,38 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: chat-mongodb
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+
+  librechat:
+    build:
+      context: ./LibreChat
+      dockerfile: Dockerfile
+    image: librechat-custom:latest
+    container_name: LibreChat
+    ports:
+      - "3080:3080"
+    env_file:
+      - ./LibreChat/.env
+    environment:
+      - HOST=0.0.0.0 # WICHTIG: Das behebt den "Empty Response" Fehler!
+      - PORT=3080
+      - MONGO_URI=mongodb://mongodb:27017/LibreChat
+
+      # Just for testing purposes delete this in production
+      - NODE_EXTRA_CA_CERTS=/app/key.pem
+    volumes:
+      - ./LibreChat/uploads:/app/uploads
+      - ./LibreChat/logs:/app/logs
+
+        # Just for testing purposes delete this in production
+      - ./LibreChat/librechat.yaml:/app/librechat.yaml
+      - ./LibreChat/key.pem:/app/key.pem
+    depends_on:
+      - mongodb
+    restart: always
+
+volumes:
+  mongo-data:
