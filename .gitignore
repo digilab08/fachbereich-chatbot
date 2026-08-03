@@ -217,4 +217,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Example folders for development tests
 ETL-worker/data
+ETL-worker/config
