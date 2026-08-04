@@ -1,0 +1,1 @@
+from .moodle_extractor import moodle_extract_relevant_files
