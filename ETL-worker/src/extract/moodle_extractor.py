@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import sqlite3
 from typing import Dict, List, Any
 
 def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List[Dict[str, str]]) -> List[dict[str, str | Path]]:
@@ -27,9 +28,17 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
         raise FileNotFoundError(f"The moodle path does not exist: '{moodle_root}'")
     if not moodle_root.is_dir():
         raise ValueError(f"The moodle path is not a directory: '{moodle_root}'")
-    
 
-    extracted_data: List[dict[str, str | Path]] = []
+    db_path = moodle_root / "moodle_state.db"
+ 
+    db_connection = None
+    if db_path.is_file():
+        try:
+            db_connection = sqlite3.connect(db_path)
+        except sqlite3.Error:
+            db_connection = None
+
+    relevant_files: List[dict[str, str | Path]] = []
 
     for file_path in moodle_root.rglob("*"):
         if not file_path.is_file():
@@ -50,14 +59,39 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
         if action == "ignore":
             continue
 
-        extracted_data.append(
-            {
-                "source": moodle_relative_path,
-                "target": (matched_rule.get("target") or "").strip(),
-                "action": action,
-                "file_path": file_path.resolve(),
-            }
+        relevant_file = {
+            "source": moodle_relative_path,
+            "target": (matched_rule.get("target") or "").strip(),
+            "action": action,
+            "file_path": file_path.resolve(),
+            "url": None,
+        }
+
+        if db_connection is not None:
+            try:
+                cursor = db_connection.cursor()
+                result = cursor.execute(
+                    "SELECT content_fileurl FROM files WHERE saved_to = ? LIMIT 1",
+                    (str(Path(relative_path)),), # The coma is necessary to make it a tuple
+                ).fetchone()
+
+
+                if result is not None and result[0] not in (None, ""):
+                    relevant_file["url"] = result[0].replace("/webservice/", "/") # Replace the webservice path to ensure the URL is accessible directly
+            except sqlite3.Error as e:
+                print(f"Error querying the database for file '{relative_path}': {e}")
+                relevant_file["url"] = None
+            finally:
+                if 'cursor' in locals():
+                    cursor.close()
+
+        relevant_files.append(
+            relevant_file
         )
 
-    return extracted_data
+    # close DB connection after processing all files
+    if db_connection is not None:
+        db_connection.close()
+
+    return relevant_files
     
