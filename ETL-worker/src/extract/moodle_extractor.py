@@ -62,7 +62,6 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
         relevant_file = {
             "source": moodle_relative_path,
             "target": (matched_rule.get("target") or "").strip(),
-            "action": action,
             "file_path": file_path.resolve(),
             "url": None,
         }
