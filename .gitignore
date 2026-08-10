@@ -220,3 +220,4 @@ __marimo__/
 # Example folders for development tests
 ETL-worker/data
 ETL-worker/config
+ETL-worker/processed-data
