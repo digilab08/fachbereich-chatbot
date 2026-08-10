@@ -1,7 +1,10 @@
 import os
+from dotenv import load_dotenv
+
 from pathlib import Path
 import sqlite3
-from typing import Dict, List, Any
+from typing import Dict, List
+
 
 def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List[Dict[str, str]]) -> List[dict[str, str | Path]]:
     """Extracts data from Moodle based on the provided extraction configuration.
@@ -67,16 +70,22 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
         }
 
         if db_connection is not None:
+            load_dotenv()
+            moodle_url = os.getenv("MOODLE_URL", None)
             try:
                 cursor = db_connection.cursor()
                 result = cursor.execute(
-                    "SELECT content_fileurl FROM files WHERE saved_to = ? LIMIT 1",
+                    "SELECT course_id, module_id, content_fileurl FROM files WHERE saved_to = ? LIMIT 1",
                     (str(Path(relative_path)),), # The coma is necessary to make it a tuple
                 ).fetchone()
 
 
-                if result is not None and result[0] not in (None, ""):
-                    relevant_file["url"] = result[0].replace("/webservice/", "/") # Replace the webservice path to ensure the URL is accessible directly
+                if result is not None:
+                    if result[2] not in (None, ""):
+                        relevant_file["url"] = result[2].replace("/webservice/", "/") # Replace the webservice path to ensure the URL is accessible directly
+                    elif moodle_url is not None:
+                        relevant_file["url"] = f"{moodle_url}/course/view.php?id={result[0]}#module-{result[1]}" 
+
             except sqlite3.Error as e:
                 print(f"Error querying the database for file '{relative_path}': {e}")
                 relevant_file["url"] = None
