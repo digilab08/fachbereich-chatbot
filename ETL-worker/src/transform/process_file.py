@@ -1,9 +1,11 @@
 from pathlib import Path
+from io import BytesIO
 from typing import Optional, Any
 
 from transformers import AutoTokenizer
 from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
+from docling.datamodel.base_models import DocumentStream
 
 class FileProcessor:
     def __init__(
@@ -24,6 +26,39 @@ class FileProcessor:
             max_tokens=1000,
             repeat_table_header=True,
         )
+
+    def try_conversion(self, file_path: Path | str) -> Optional[Any]:
+        """Try to convert a file into a Docling conversion result.
+
+        This method reads the given file into memory and passes a BytesIO
+        stream to :class:`docling.document_converter.DocumentConverter` for
+        conversion. Any exception during reading or conversion is caught and
+        logged to stdout, and ``None`` is returned on failure.
+
+        :param file_path: Path to the file to convert.
+        :returns: The conversion result object on success, or ``None`` on failure.
+        """
+
+        # TODO: Test if the following improves text quality for images in PDFs. 
+        # from docling.pipeline.vlm_pipeline import VlmPipeline
+        # converter = DocumentConverter(
+        #     format_options={
+        #         # InputFormat anpassen (z. B. InputFormat.IMAGE oder InputFormat.PDF)
+        #         InputFormat.IMAGE: FormatOption(pipeline_cls=VlmPipeline)
+        #     }
+        # )
+        try:
+            file_path = Path(file_path)
+            file_bytes = file_path.read_bytes()
+
+            # Guarantees that buf.close() is called when the block is exited
+            with BytesIO(file_bytes) as buf:
+                document_stream = DocumentStream(name=file_path.name, stream=buf)
+                conversion = self.converter.convert(document_stream) 
+            return conversion
+        except Exception as e:
+            print(f"Failed to convert {file_path}: {e} ")
+        return None
 
     def process_file(self, relevant_file: dict[str, str | Path]) -> None:
         """
@@ -50,6 +85,8 @@ class FileProcessor:
         output_path = self.output_folder_path / (str(relevant_file["source"]) + ".md")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # TODO: If .md file check if .url file with the same name exists and if so, read the .url file content and write it to the .md file before proceeding with conversion and skip the .url file processing. This is to ensure that .url files are processed correctly and their content is preserved in the markdown output.
+
         if file_path.is_file() and file_path.suffix.lower() == ".url":
             try:
                 content = file_path.read_text(encoding="utf-8")
@@ -58,7 +95,8 @@ class FileProcessor:
             except UnicodeDecodeError:
                 return
 
-        docling_conversion = self.converter.convert(file_path)
+        docling_conversion = self.try_conversion(file_path)
+        if docling_conversion is None: return []
         docling_document = docling_conversion.document
 
         markdown_output = docling_document.export_to_markdown()
