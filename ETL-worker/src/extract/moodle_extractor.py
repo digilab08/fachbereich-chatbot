@@ -47,11 +47,10 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
         if not file_path.is_file():
             continue
 
-        relative_path = file_path.relative_to(moodle_root).as_posix()
-        moodle_relative_path = f"moodle/{relative_path}"
+        relative_path = file_path.relative_to(data_root).as_posix()
 
         matched_rule = next(
-            (rule for rule in prepared_config if moodle_relative_path.startswith(rule["source"])),
+            (rule for rule in prepared_config if relative_path.startswith(rule["source"])),
             None,
         )
 
@@ -63,7 +62,7 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
             continue
 
         relevant_file = {
-            "source": moodle_relative_path,
+            "source": relative_path,
             "target": (matched_rule.get("target") or "").strip(),
             "file_path": file_path.resolve(),
             "url": None,
