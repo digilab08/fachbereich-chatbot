@@ -66,6 +66,7 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
             "target": (matched_rule.get("target") or "").strip(),
             "file_path": file_path.resolve(),
             "url": None,
+            "timestamp": file_path.stat().st_mtime,
         }
 
         if db_connection is not None:

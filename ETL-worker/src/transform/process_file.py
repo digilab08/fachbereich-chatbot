@@ -1,6 +1,7 @@
 from pathlib import Path
 from io import BytesIO
 from typing import Optional, Any
+import os
 
 from transformers import AutoTokenizer
 from docling.document_converter import DocumentConverter
@@ -81,6 +82,7 @@ class FileProcessor:
                 URL, and extracted page number.
         """
         file_path = relevant_file["file_path"]
+        file_time_stamp = file_path.stat().st_mtime
 
         output_path = self.output_folder_path / (str(relevant_file["source"]) + ".md")
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -101,6 +103,7 @@ class FileProcessor:
 
         markdown_output = docling_document.export_to_markdown()
         output_path.write_text(markdown_output, encoding="utf-8")
+        os.utime(output_path, (file_time_stamp, file_time_stamp))
 
         chunks_iter = self.chunker.chunk(dl_doc=docling_document)
 
@@ -127,6 +130,7 @@ class FileProcessor:
                 "sparse_embedding_text": sparse_embedding_text,
                 "url": relevant_file.get("url"),
                 "page_number": get_chunk_page_number(chunk),
+                "timestamp": relevant_file.get("timestamp"),
             }
 
         result = list(map(chunk_to_dict, list(chunks_iter)))
