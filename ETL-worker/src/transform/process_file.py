@@ -8,24 +8,28 @@ from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
 from docling.datamodel.base_models import DocumentStream
 
+from .embed import Embedder
+
 class FileProcessor:
     def __init__(
         self,
         output_folder_path: str | Path,
-        dense_model: str = "BAAI/bge-small-en-v1.5",
+        dense_model: str = "jinaai/jina-embeddings-v3",
         sparse_model: str = "Qdrant/bm25",
-        qdrant_url: str = "http://localhost:6333",
     ) -> None:
         self.output_folder_path = Path(output_folder_path)
         self.dense_model = dense_model
         self.sparse_model = sparse_model
-        self.qdrant_url = qdrant_url
         self.converter = DocumentConverter()
         self.tokenizer = AutoTokenizer.from_pretrained(self.dense_model)
         self.chunker = HybridChunker(
             tokenizer=self.tokenizer,
             max_tokens=1000,
             repeat_table_header=True,
+        )
+        self.embedder = Embedder(
+            dense_model=self.dense_model,
+            sparse_model=self.sparse_model,
         )
 
     def try_conversion(self, file_path: Path | str) -> Optional[Any]:
@@ -134,6 +138,10 @@ class FileProcessor:
             }
 
         result = list(map(chunk_to_dict, list(chunks_iter)))
+
+        # Attach dense and sparse embeddings so the load step only persists them
+        self.embedder.embed_chunks(result)
+
         return result
 
 def get_chunk_page_number(chunk: Any) -> Optional[int]:
