@@ -33,6 +33,19 @@ services:
     depends_on:
       - mongodb
     restart: always
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_db
+    restart: always
+    ports:
+      # REST API
+      - "6333:6333"
+      # gRPC API 
+      - "6334:6334"
+    volumes:
+      # Persist data locally in the ./qdrant_data folder
+      - qdrant-data:/qdrant/storage
 
 volumes:
   mongo-data:
+  qdrant-data:
