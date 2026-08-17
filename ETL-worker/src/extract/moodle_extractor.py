@@ -48,6 +48,7 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
             continue
 
         relative_path = file_path.relative_to(data_root).as_posix()
+        path_in_moodle = file_path.relative_to(moodle_root).as_posix()
 
         matched_rule = next(
             (rule for rule in prepared_config if relative_path.startswith(rule["source"])),
@@ -69,6 +70,7 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
             "timestamp": file_path.stat().st_mtime,
         }
 
+        print(f"DB-Connection is {'available' if db_connection is not None else 'not available'} for file '{relative_path}'")
         if db_connection is not None:
             load_dotenv()
             moodle_url = os.getenv("MOODLE_URL", None)
@@ -76,7 +78,7 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
                 cursor = db_connection.cursor()
                 result = cursor.execute(
                     "SELECT course_id, module_id, content_fileurl FROM files WHERE saved_to = ? LIMIT 1",
-                    (str(Path(relative_path)),), # The coma is necessary to make it a tuple
+                    (str(Path(path_in_moodle)),), # The coma is necessary to make it a tuple
                 ).fetchone()
 
 
