@@ -23,11 +23,6 @@ class DiffFileStates:
             
         self.processed_file_paths_set = set(processed_file_path_list)
 
-        print(f"Relevant file paths: {list(self.relevant_file_paths_set)[:5]}")
-        print()
-        print(f"Processed file paths: {list(self.processed_file_paths_set)[:5]}")
-        print()
-
     def get_new_files(self) -> list[dict[str, str | Path]]:
         new_files_set = self.relevant_file_paths_set - self.processed_file_paths_set
         new_files = list(filter(lambda file: str(file["source"]) in new_files_set, self.relevant_files))
