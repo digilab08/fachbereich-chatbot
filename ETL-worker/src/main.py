@@ -46,6 +46,7 @@ class PipelineConfig:
     :param moodle_url: Base URL of the Moodle instance, used to build
         fallback URLs for files without a direct content URL.
     :param collection_name: Name of the Qdrant collection to write to.
+    :param qdrant_url: URL of the Qdrant instance to connect to.
     """
 
     extraction_config_path: str
@@ -53,6 +54,7 @@ class PipelineConfig:
     processed_folder_path: str
     moodle_url: str
     collection_name: str
+    qdrant_url: str
 
     @classmethod
     def from_env(cls) -> "PipelineConfig":
@@ -66,6 +68,7 @@ class PipelineConfig:
             processed_folder_path=os.getenv("PROCESSED_FOLDER_PATH", "processed-data"),
             moodle_url=os.getenv("MOODLE_URL", "https://moodle.hsnr.de"),
             collection_name=os.getenv("QDRANT_COLLECTION_NAME", "chatbot-collection"),
+            qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
         )
 
 
@@ -81,6 +84,7 @@ def extract_relevant_files(config: PipelineConfig) -> list[dict[str, Any]]:
         moodle_extract_relevant_files(
             data_path=config.data_path,
             extraction_config=extraction_config,
+            moodle_url=config.moodle_url,
         )
     )
     logger.info("Relevant files: %d", len(relevant_files))
@@ -192,7 +196,10 @@ def main() -> None:
     logger.debug("Files to process: %d", len(files_to_process))
 
     file_processor = FileProcessor(output_folder_path=config.processed_folder_path)
-    qdrant_collection = QdrantCollection(collection_name=config.collection_name)
+    qdrant_collection = QdrantCollection(
+        collection_name=config.collection_name,
+        qdrant_url=config.qdrant_url,
+    )
 
     cleanup_removed(removed_files, config, qdrant_collection)
     process_and_upload(files_to_process, file_processor, qdrant_collection)

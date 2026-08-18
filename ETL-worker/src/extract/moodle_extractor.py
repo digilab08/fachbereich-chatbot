@@ -1,20 +1,24 @@
-import os
-from dotenv import load_dotenv
-
 from pathlib import Path
 import sqlite3
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from utils import get_logger
 
 logger = get_logger(__name__)
 
 
-def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List[Dict[str, str]]) -> List[dict[str, str | Path]]:
+def moodle_extract_relevant_files(
+    data_path: str | Path,
+    extraction_config: List[Dict[str, str]],
+    moodle_url: Optional[str] = None,
+) -> List[dict[str, str | Path]]:
     """Extracts data from Moodle based on the provided extraction configuration.
 
     :param data_path: The path to the data directory.
     :param extraction_config: A list of dictionaries containing extraction configuration.
+    :param moodle_url: Base URL of the Moodle instance, used to build fallback
+        URLs for files without a direct content URL. If ``None``, only direct
+        content URLs from the database are used.
     :return: A list of dictionaries containing the extracted data with the source and the target.
     :raises FileNotFoundError: If the data path or moodle path does not exist.
     :raises ValueError: If the data path or moodle path is not a directory.
@@ -76,8 +80,6 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
 
 
         if db_connection is not None:
-            load_dotenv()
-            moodle_url = os.getenv("MOODLE_URL", None)
             try:
                 cursor = db_connection.cursor()
                 result = cursor.execute(
