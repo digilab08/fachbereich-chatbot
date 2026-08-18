@@ -118,12 +118,11 @@ class QdrantCollection:
             points=points,
         )
 
-    def delete_by_source(self, collection_name: str, source: str | List[str]) -> None:
+    def delete_by_source(self, source: str | List[str]) -> None:
         """
         Deletes all document chunks in the specified collection that match the
         given source or list of sources.
 
-        :param collection_name: The name of the Qdrant collection.
         :param source: A single source identifier or a list of source identifiers to match for deletion.
         """
         if isinstance(source, str):
@@ -141,6 +140,6 @@ class QdrantCollection:
         )
 
         self.client.delete(
-            collection_name=collection_name,
+            collection_name=self.collection_name,
             points_selector=delete_filter,
         )
