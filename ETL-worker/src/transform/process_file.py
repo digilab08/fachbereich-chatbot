@@ -6,9 +6,12 @@ import os
 from transformers import AutoTokenizer
 from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
-from docling.datamodel.base_models import DocumentStream
-
+from docling.datamodel.base_models import ConversionStatus, DocumentStream
 from .embed import Embedder
+
+from utils import get_logger
+
+logger = get_logger(__name__)
 
 class FileProcessor:
     def __init__(
@@ -59,10 +62,13 @@ class FileProcessor:
             # Guarantees that buf.close() is called when the block is exited
             with BytesIO(file_bytes) as buf:
                 document_stream = DocumentStream(name=file_path.name, stream=buf)
-                conversion = self.converter.convert(document_stream) 
-            return conversion
+                conversion = self.converter.convert(document_stream, raises_on_error=False) 
+                if conversion.status == ConversionStatus.SUCCESS:
+                    return conversion
+                error_msgs = "; ".join(e.error_message for e in conversion.errors)
+                logger.error("Failed to convert %s: %s", file_path.name, error_msgs)
         except Exception as e:
-            print(f"Failed to convert {file_path}: {e} ")
+            logger.error("Failed to convert %s: %s", file_path, e)
         return None
 
     def process_file(self, relevant_file: dict[str, str | Path]) -> None:

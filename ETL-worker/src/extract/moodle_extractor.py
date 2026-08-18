@@ -5,6 +5,10 @@ from pathlib import Path
 import sqlite3
 from typing import Dict, List
 
+from utils import get_logger
+
+logger = get_logger(__name__)
+
 
 def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List[Dict[str, str]]) -> List[dict[str, str | Path]]:
     """Extracts data from Moodle based on the provided extraction configuration.
@@ -70,7 +74,7 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
             "timestamp": file_path.stat().st_mtime,
         }
 
-        print(f"DB-Connection is {'available' if db_connection is not None else 'not available'} for file '{relative_path}'")
+
         if db_connection is not None:
             load_dotenv()
             moodle_url = os.getenv("MOODLE_URL", None)
@@ -89,7 +93,7 @@ def moodle_extract_relevant_files(data_path: str | Path, extraction_config: List
                         relevant_file["url"] = f"{moodle_url}/course/view.php?id={result[0]}#module-{result[1]}" 
 
             except sqlite3.Error as e:
-                print(f"Error querying the database for file '{relative_path}': {e}")
+                logger.exception("Error querying the database for file '%s': %s", relative_path, e)
                 relevant_file["url"] = None
             finally:
                 if 'cursor' in locals():
