@@ -1,10 +1,11 @@
 import csv
 import os
-from typing import Dict, List, Union
+from typing import Dict, List
+from pathlib import Path
 
 
 def get_csv_as_dict_list(
-    file_path: Union[str, os.PathLike], encoding: str = "utf-8"
+    file_path: str | Path, encoding: str = "utf-8"
 ) -> List[Dict[str, str]]:
     """Reads a CSV file and returns its contents as a list of dictionaries.
 
