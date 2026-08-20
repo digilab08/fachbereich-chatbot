@@ -221,3 +221,7 @@ __marimo__/
 ETL-worker/data
 ETL-worker/config
 ETL-worker/processed-data
+
+MCP-server/data
+MCP-server/config
+MCP-server/processed-data
