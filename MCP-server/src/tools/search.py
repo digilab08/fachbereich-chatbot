@@ -1,7 +1,18 @@
-from typing import List, Optional
 from xml.sax.saxutils import escape
 from fastmcp import FastMCP
 from services.qdrant_svc import QdrantService
+from services.study_programs_svc import study_program_exists, get_categories
+
+def improve_url(url: str, page: str | None) -> str:
+    if not url:
+        return ""
+
+    if url.endswith("?forcedownload=1"):
+        url = url[:-len("?forcedownload=1")]
+    
+    if page:
+        url += f"#{page}"
+    return url
 
 def register_search_tools(mcp: FastMCP, qdrant_svc: QdrantService) -> None:
     """
@@ -12,41 +23,45 @@ def register_search_tools(mcp: FastMCP, qdrant_svc: QdrantService) -> None:
     """
     
     @mcp.tool()
-    async def search_notes(query: str, degree_program_code: str) -> str:
+    async def search_university_information(query: str, degree_program_abbreviation: str) -> str:
         """
-        Perform a hybrid semantic search over the markdown notes.
-        
-        This tool searches for university specific information based on the user's degree program code. 
+        Perform a hybrid semantic search over university_information based on the user's degree program code. 
         
         :param query: The search query text, usually a question about university policies or procedures.
-        :param degree_program_code: The code for the degree program to filter by. Usually, this is a three-letter code like "BWL" or "BWI".
-        :return: A formatted string containing the search results to be read by the LLM.
+        :param degree_program_abbreviation: The code for the degree program to filter by. Usually, this is a three-letter code like "BWL" or "BWI".
+        :return: A formatted string containing the search results.
         """
-        results = await qdrant_svc.search_hybrid(
-            query_text=query,
-            target_tags=[degree_program_code, "FB08"]
-        )
+        if not study_program_exists(degree_program_abbreviation):
+            return f"Error: The degree program code '{degree_program_abbreviation}' is not recognized. Probably use another tool to check which programs are available or ask the user for clarification."
+
+        target_tags = get_categories(degree_program_abbreviation)
+
+        try:
+            results = await qdrant_svc.search_hybrid(
+                query_text=query,
+                target_tags=target_tags
+            )
+        except Exception as e:
+            return "Error: An error occurred while searching for university information."
         
         if not results:
-            return "<search_results count='0'><message>No relevant notes found for your query.</message></search_results>"
+            return "<message>No relevant university information found for your query.</message>"
         
         # Format the results into an XML string for structured parsing by the LLM
         response_lines = ["<search_results>"]
         for idx, point in enumerate(results, 1):
             payload = point.payload or {}
             source = payload.get("source", "Unknown source")
-            url = payload.get("url", "")
+            url = improve_url(payload.get("url", ""), payload.get("page_number"))
             headings = payload.get("headings") or []
             text = payload.get("text", "")
 
-            response_lines.append(f"  <result index='{idx}'>")
-            response_lines.append(f"    <source>{escape(str(source))}</source>")
-            if url:
-                response_lines.append(f"    <url>{escape(str(url))}</url>")
-            if headings:
-                headings_text = ", ".join(str(heading) for heading in headings)
-                response_lines.append(f"    <headings>{escape(headings_text)}</headings>")
-            response_lines.append(f"    <content>{escape(str(text))}</content>")
+            url_param = f" url='{escape(str(url))}'" if url else ""
+            headings_param = f" headings='{escape(' > '.join(str(h) for h in headings))}'" if headings else ""
+
+            response_lines.append(f"  <result index='{idx}' source='{escape(str(source))}{url_param}{headings_param}'>")
+  
+            response_lines.append(f"    {escape(str(text))}")
             response_lines.append("  </result>")
         
         response_lines.append("</search_results>")
