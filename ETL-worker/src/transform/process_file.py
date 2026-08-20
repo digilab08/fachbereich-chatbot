@@ -4,7 +4,10 @@ from typing import Optional, Any
 import os
 
 from transformers import AutoTokenizer
-from docling.document_converter import DocumentConverter
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from docling.chunking import HybridChunker
 from docling.datamodel.base_models import ConversionStatus, DocumentStream
 from .embed import Embedder
@@ -23,7 +26,6 @@ class FileProcessor:
         self.output_folder_path = Path(output_folder_path)
         self.dense_model = dense_model
         self.sparse_model = sparse_model
-        self.converter = DocumentConverter()
         self.tokenizer = AutoTokenizer.from_pretrained(self.dense_model)
         self.chunker = HybridChunker(
             tokenizer=self.tokenizer,
@@ -34,6 +36,19 @@ class FileProcessor:
             dense_model=self.dense_model,
             sparse_model=self.sparse_model,
         )
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.generate_parsed_pages = False
+        self.pdf_options = PdfFormatOption(
+            pipeline_options=pipeline_options,
+            document_backend=PyPdfiumDocumentBackend,
+        )
+        self.pdf_converter = DocumentConverter(
+            allowed_formats=[InputFormat.PDF],
+            format_options={InputFormat.PDF: self.pdf_options}
+        )
+        self.default_converter = DocumentConverter()
+
+
 
     def try_conversion(self, file_path: Path | str) -> Optional[Any]:
         """Try to convert a file into a Docling conversion result.
@@ -56,13 +71,20 @@ class FileProcessor:
         #     }
         # )
         try:
+ 
+            
             file_path = Path(file_path)
             file_bytes = file_path.read_bytes()
 
             # Guarantees that buf.close() is called when the block is exited
             with BytesIO(file_bytes) as buf:
                 document_stream = DocumentStream(name=file_path.name, stream=buf)
-                conversion = self.converter.convert(document_stream, raises_on_error=False) 
+
+                if(file_path.suffix.lower() == ".pdf"):
+                    converter = self.pdf_converter
+                else:
+                    converter = self.default_converter
+                conversion = converter.convert(document_stream, raises_on_error=False)
                 if conversion.status == ConversionStatus.SUCCESS:
                     return conversion
                 error_msgs = "; ".join(e.error_message for e in conversion.errors)
