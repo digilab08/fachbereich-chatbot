@@ -2,7 +2,7 @@ import csv
 import io
 
 from fastmcp import FastMCP
-from services.study_programs_svc import study_program_exists
+from services.study_programs_svc import study_program_exists, list_study_programs
 from services.contact_point_svc import get_contact_points_by_degree_program
 
 def register_static_info_tools(mcp: FastMCP) -> None:
@@ -13,7 +13,7 @@ def register_static_info_tools(mcp: FastMCP) -> None:
     """
     
     @mcp.tool()
-    async def list_study_programs() -> str:
+    async def list_all_study_programs() -> str:
         """
         Returns study program abbreviations and full names as CSV-formatted text.
         
@@ -21,9 +21,9 @@ def register_static_info_tools(mcp: FastMCP) -> None:
         """
         
         
-        programs = fetch_study_programs()
+        programs = list_study_programs()
         if not programs:
-            return "abbreviation,full name\n"
+            return "Error: No study programs found."
 
         output = io.StringIO()
         writer = csv.writer(output, lineterminator="\n")
