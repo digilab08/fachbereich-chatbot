@@ -36,6 +36,17 @@ class QdrantCollection:
         self.client = QdrantClient(url=qdrant_url)
         self.collection_name = collection_name
 
+    def test_connection(self) -> bool:
+        """Checks whether a connection to the Qdrant instance can be established.
+
+        :return: True if the server is reachable, otherwise False.
+        """
+        try:
+            self.client.get_collections()
+            return True
+        except Exception as e:
+            return False
+
     def upload_chunks(self, chunks: List[Dict[str, Any]]) -> None:
         """
         Main entry point to upload a list of pre-embedded chunks to Qdrant.
@@ -48,7 +59,7 @@ class QdrantCollection:
             return
 
         points = self._build_points(chunks)
-        self._ensure_collection_exists(self.collection_name, points[0])
+        self.ensure_collection_exists(points[0])
         self._upload_to_qdrant(points)
 
     def _build_points(self, chunks: List[Dict[str, Any]]) -> List[PointStruct]:
@@ -83,19 +94,18 @@ class QdrantCollection:
 
         return points
 
-    def _ensure_collection_exists(self, collection_name: str, sample_point: PointStruct) -> None:
+    def ensure_collection_exists(self, sample_point: PointStruct) -> None:
         """
         Checks if the specified collection exists and creates it with hybrid
         vector configurations if not.
 
-        :param collection_name: The name of the collection to check or create.
         :param sample_point: A sample point to extract the dense vector dimension dynamically.
         """
-        if not self.client.collection_exists(collection_name):
+        if not self.client.collection_exists(self.collection_name):
             dense_vector_size = len(sample_point.vector["dense"])
 
             self.client.create_collection(
-                collection_name=collection_name,
+                collection_name=self.collection_name,
                 vectors_config={
                     "dense": VectorParams(
                         size=dense_vector_size,

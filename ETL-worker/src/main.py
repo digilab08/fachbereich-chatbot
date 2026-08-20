@@ -160,6 +160,7 @@ def process_and_upload(
     progress.start()
 
     for file_to_process in files_to_process:
+        logger.debug("Processing file: %s", file_to_process["source"])
         try:
             processed_file_chunks = file_processor.process_file(file_to_process)
             logger.debug("%s - %d chunks", file_to_process["source"], len(processed_file_chunks))
@@ -200,6 +201,9 @@ def main() -> None:
         collection_name=config.collection_name,
         qdrant_url=config.qdrant_url,
     )
+    if not qdrant_collection.test_connection():
+        logger.error("Failed to connect to Qdrant at %s", config.qdrant_url)
+        return
 
     cleanup_removed(removed_files, config, qdrant_collection)
     process_and_upload(files_to_process, file_processor, qdrant_collection)
