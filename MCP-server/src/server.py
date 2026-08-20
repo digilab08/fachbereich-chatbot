@@ -9,6 +9,7 @@ from fastmcp import FastMCP
 from services.qdrant_svc import QdrantService
 from services.embed_svc import EmbeddingService
 from tools.search import register_search_tools
+from tools.static_info import register_static_info_tools
 
 from utils import get_logger
 
@@ -100,7 +101,8 @@ logger.debug("Initialized Qdrant service for collection '%s'.", config.collectio
 
 register_search_tools(mcp=mcp, qdrant_svc=qdrant_service)
 logger.debug("Registered search tools on the MCP server.")
-    
+register_static_info_tools(mcp=mcp)
+logger.debug("Registered static info tools on the MCP server.")
 
 
 
