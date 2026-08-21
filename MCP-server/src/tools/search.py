@@ -3,6 +3,7 @@ from fastmcp import FastMCP
 from services.qdrant_svc import QdrantService
 from services.study_programs_svc import study_program_exists, get_categories
 
+
 def improve_url(url: str, page: str | None) -> str:
     if not url:
         return ""
@@ -11,7 +12,8 @@ def improve_url(url: str, page: str | None) -> str:
         url = url[:-len("?forcedownload=1")]
     
     if page:
-        url += f"#{page}"
+        url += f"#page={page}"
+
     return url
 
 def register_search_tools(mcp: FastMCP, qdrant_svc: QdrantService) -> None:
