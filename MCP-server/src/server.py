@@ -10,6 +10,7 @@ from services.qdrant_svc import QdrantService
 from services.embed_svc import EmbeddingService
 from tools.search import register_search_tools
 from tools.static_info import register_static_info_tools
+from tools.file_access import register_file_access_tools
 
 from utils import get_logger
 
@@ -48,7 +49,6 @@ class PipelineConfig:
     qdrant_url: str
     dense_model_name: str
     sparse_model_name: str
-    transport: str
     host: str
     port: int
     mcp_server_name: str
@@ -69,7 +69,6 @@ class PipelineConfig:
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
             dense_model_name=os.getenv("DENSE_MODEL_NAME", "jinaai/jina-embeddings-v3"),
             sparse_model_name=os.getenv("SPARSE_MODEL_NAME", "Qdrant/bm25"),
-            transport=os.getenv("MCP_TRANSPORT", "sse"),
             host=os.getenv("MCP_HOST", "0.0.0.0"),
             port=int(os.getenv("MCP_PORT", "9001")),
             mcp_server_name=os.getenv("MCP_SERVER_NAME", "HSNR-FB08-MCP"),
@@ -77,12 +76,11 @@ class PipelineConfig:
     
 config = PipelineConfig.from_env()
 logger.debug(
-    "Loaded configuration: collection=%s, qdrant_url=%s, dense_model=%s, sparse_model=%s, transport=%s, host=%s, port=%s",
+    "Loaded configuration: collection=%s, qdrant_url=%s, dense_model=%s, sparse_model=%s, host=%s, port=%s",
     config.collection_name,
     config.qdrant_url,
     config.dense_model_name,
     config.sparse_model_name,
-    config.transport,
     config.host,
     config.port,
 )
@@ -104,10 +102,12 @@ logger.debug("Registered search tools on the MCP server.")
 register_static_info_tools(mcp=mcp)
 logger.debug("Registered static info tools on the MCP server.")
 
+register_file_access_tools(mcp=mcp, data_dir=config.data_dir, qdrant_svc=qdrant_service)
+
 
 
 if __name__ == "__main__":
-    logger.debug("Starting MCP server on %s:%s using transport '%s'.", config.host, config.port, config.transport)
-    mcp.run(transport=config.transport, host=config.host, port=config.port)
+    logger.debug("Starting MCP server on %s:%s.", config.host, config.port)
+    mcp.run(transport="sse", host=config.host, port=config.port)
 
         

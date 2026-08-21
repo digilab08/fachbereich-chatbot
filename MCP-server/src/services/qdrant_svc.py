@@ -74,3 +74,39 @@ class QdrantService:
         )
 
         return search_results.points
+
+    async def search_payload(
+        self,
+        filters: dict,
+        limit: int = 5,
+    ) -> List[Any]:
+        """
+        Perform a non-vector, payload-only search (scroll) with exact field matching.
+
+        Only points whose payload matches ALL provided filter key-value pairs are
+        returned. For example, filters={"target": "lol"} returns only points where
+        the payload field 'target' equals "lol".
+
+        :param filters: Dictionary of payload field -> value to match exactly (AND condition).
+        :param limit: Maximum number of results to return. Defaults to 5.
+        :return: A list of retrieved Qdrant points containing payload.
+        """
+        must_conditions = [
+            models.FieldCondition(
+                key=field,
+                match=models.MatchValue(value=value),
+            )
+            for field, value in filters.items()
+        ]
+
+        query_filter = models.Filter(must=must_conditions)
+
+        scroll_results = await self.client.scroll(
+            collection_name=self.collection_name,
+            scroll_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        return scroll_results[0]
