@@ -2,19 +2,8 @@ from xml.sax.saxutils import escape
 from fastmcp import FastMCP
 from services.qdrant_svc import QdrantService
 from services.study_programs_svc import study_program_exists, get_categories
+from utils import improve_url
 
-
-def improve_url(url: str, page: str | None) -> str:
-    if not url:
-        return ""
-
-    if url.endswith("?forcedownload=1"):
-        url = url[:-len("?forcedownload=1")]
-    
-    if page:
-        url += f"#page={page}"
-
-    return url
 
 def register_search_tools(mcp: FastMCP, qdrant_svc: QdrantService) -> None:
     """
