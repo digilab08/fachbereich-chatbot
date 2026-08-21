@@ -1,38 +1,47 @@
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: chat-mongodb
-    restart: always
-    volumes:
-      - mongo-data:/data/db
-
-  librechat:
+  moodle-dl:
     build:
-      context: ./LibreChat
+      context: ./moodle-dl
       dockerfile: Dockerfile
-    image: librechat-custom:latest
-    container_name: LibreChat
-    ports:
-      - "3080:3080"
-    env_file:
-      - ./LibreChat/.env
-    environment:
-      - HOST=0.0.0.0 # WICHTIG: Das behebt den "Empty Response" Fehler!
-      - PORT=3080
-      - MONGO_URI=mongodb://mongodb:27017/LibreChat
-
-      # Just for testing purposes delete this in production
-      - NODE_EXTRA_CA_CERTS=/app/key.pem
+    container_name: moodle-dl
     volumes:
-      - ./LibreChat/uploads:/app/uploads
-      - ./LibreChat/logs:/app/logs
+      - raw-data:/files
+    labels:
+      ofelia.enabled: "true"
+      # Cron-Syntax: Seconds Minutes Hours Day Month Weekday
+      ofelia.job-run.moodle-sync.schedule: "@every 12h"
+      ofelia.job-run.moodle-sync.container: "moodle-dl"
 
-        # Just for testing purposes delete this in production
-      - ./LibreChat/librechat.yaml:/app/librechat.yaml
-      - ./LibreChat/key.pem:/app/key.pem
-    depends_on:
-      - mongodb
-    restart: always
+  # Optional but recomended to store the config csv files.
+  # If you don't want to store them in sciebo, you can remove the volume and and bind the config files directly to the container ETL-Worker and MCP-Server.
+  sciebo-sync:
+    image: rclone/rclone:latest
+    container_name: sciebo-sync
+    restart: unless-stopped
+    environment:
+      - NC_URL=${NC_URL}
+      - NC_USER=${NC_USER}
+      - NC_PASS=${NC_PASS}
+      - NC_SUBFOLDER=${NC_SUBFOLDER}
+    volumes:
+      - sciebo-data:/data
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "[$(date)] Running initial startup sync..."
+        OBSCURED_PASS=$$(rclone obscure "$$NC_PASS")
+        rclone sync ":webdav,url='$${NC_URL}',user='$${NC_USER}',pass='$${OBSCURED_PASS}',vendor='owncloud':$${NC_SUBFOLDER}" /data --verbose --create-empty-src-dirs
+        echo "[$(date)] Initial sync finished. Waiting for Ofelia schedule..."
+        sleep infinity
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.rclone-sync.schedule: "@every 5m"
+      ofelia.job-exec.rclone-sync.command: >
+        /bin/sh -c "
+        OBSCURED_PASS=$$(rclone obscure \"$$NC_PASS\") &&
+        rclone sync \":webdav,url='$${NC_URL}',user='$${NC_USER}',pass='$${OBSCURED_PASS}',vendor='owncloud':$${NC_SUBFOLDER}\" /data --verbose --create-empty-src-dirs
+        "
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant_db
@@ -40,12 +49,51 @@ services:
     ports:
       # REST API
       - "6333:6333"
-      # gRPC API 
+      # gRPC API
       - "6334:6334"
     volumes:
       # Persist data locally in the ./qdrant_data folder
       - qdrant-data:/qdrant/storage
 
+  # Testing purposes only, remove in production
+
+  # mongodb:
+  #   image: mongo:latest
+  #   container_name: chat-mongodb
+  #   restart: always
+  #   volumes:
+  #     - mongo-data:/data/db
+
+  # librechat:
+  #   build:
+  #     context: ./LibreChat
+  #     dockerfile: Dockerfile
+  #   image: librechat-custom:latest
+  #   container_name: LibreChat
+  #   ports:
+  #     - "3080:3080"
+  #   env_file:
+  #     - ./LibreChat/.env
+  #   environment:
+  #     - HOST=0.0.0.0 # WICHTIG: Das behebt den "Empty Response" Fehler!
+  #     - PORT=3080
+  #     - MONGO_URI=mongodb://mongodb:27017/LibreChat
+
+  #     # Just for testing purposes delete this in production
+  #     - NODE_EXTRA_CA_CERTS=/app/key.pem
+  #   volumes:
+  #     - ./LibreChat/uploads:/app/uploads
+  #     - ./LibreChat/logs:/app/logs
+
+  #       # Just for testing purposes delete this in production
+  #     - ./LibreChat/librechat.yaml:/app/librechat.yaml
+  #     - ./LibreChat/key.pem:/app/key.pem
+  #   depends_on:
+  #     - mongodb
+  #   restart: always
+
 volumes:
   mongo-data:
   qdrant-data:
+  raw-data:
+  sciebo-data:
