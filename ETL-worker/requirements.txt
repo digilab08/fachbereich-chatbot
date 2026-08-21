@@ -22,11 +22,11 @@ cryptography==49.0.0
 defusedxml==0.7.1
 dill==0.4.1
 doclang==0.7.0
-docling==2.119.0
+docling==2.120.3
 docling-core==2.91.0
 docling-ibm-models==3.13.3
 docling-parse==7.12.1
-docling-slim==2.119.0
+docling-slim==2.120.3
 et_xmlfile==2.0.0
 Faker==40.23.0
 fastembed==0.8.0
