@@ -13,4 +13,4 @@ RUN pip install --no-cache-dir -r requirements.in
 
 COPY src/ ./src
 
-CMD ["fastmcp", "run", "src/server.py", "--transport", "sse", "--port", "9001"]
+CMD ["fastmcp", "run", "src/server.py", "--transport", "sse", "--port", "9001", "--host", "0.0.0.0"]
