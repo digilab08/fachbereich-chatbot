@@ -18,6 +18,8 @@ Moodle Downloader
     - Recommended Answer: No
   - Question: Would you like to download descriptions of the courses you have selected?
     - Recommended Answer: Yes
+  - Question: Would you like to download links in descriptions?
+    - Recommended Answer: No (Not sure)
   - Question: Do you want to download databases of your courses?
     - Recommended Answer: No
   - Question: Do you want to download forums of your courses?
@@ -58,3 +60,25 @@ in the en file set sciebo url and after the url add `/remote.php/webdav/` for th
 ### Starting the docker compose
 
 run `docker compose up -d`
+
+## Testting with libreChat
+
+uncomment the libre chat parts at the end of the docker-compose. Also copy the .env.example in the librechat folder into a .env file in the same folder and follow the instructions to add your llm provider.
+
+Also create a librechat.yaml in this folder which contains the following.
+
+```
+version: 1.1.5
+cache: true
+
+mcpSettings:
+  allowedAddresses:
+    - "mcp-server:9001"
+
+mcpServers:
+  HSNR-FB08-MCP:
+    type: "sse"
+    url: "http://mcp-server:9001"
+```
+
+probably change the version number like in the librechat.example.yaml

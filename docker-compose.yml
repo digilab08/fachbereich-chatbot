@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: moodle-dl
     volumes:
-      - raw-data:/files
+      - moodle-data:/files
     labels:
       ofelia.enabled: "true"
       # Cron-Syntax: Seconds Minutes Hours Day Month Weekday
@@ -41,6 +41,51 @@ services:
         OBSCURED_PASS=$$(rclone obscure \"$$NC_PASS\") &&
         rclone sync \":webdav,url='$${NC_URL}',user='$${NC_USER}',pass='$${OBSCURED_PASS}',vendor='owncloud':$${NC_SUBFOLDER}\" /data --verbose --create-empty-src-dirs
         "
+
+  etl-worker:
+    build:
+      context: ./ETL-worker
+      dockerfile: Dockerfile
+    container_name: etl-worker
+    volumes:
+      - moodle-data:/app/data/moodle
+      - sciebo-data:/app/config
+      - processed_data:/app/processed_data
+    environment:
+      # Change LOG_LEVEL to DEBUG for more verbose logging
+      - LOG_LEVEL=INFO
+      - EXTRACTION_CONFIG_PATH=config/extraction_config.csv
+      - DATA_PATH=data
+      - PROCESSED_FOLDER_PATH=processed_data
+      - MOODLE_URL=${MOODLE_URL}
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION_NAME=chatbot-collection
+    depends_on:
+      - qdrant
+    labels:
+      ofelia.enabled: "true"
+
+  mcp-server:
+    build:
+      context: ./MCP-server
+      dockerfile: Dockerfile
+    container_name: mcp-server
+    ports:
+      - "9001:9001"
+    volumes:
+      - processed_data:/app/data
+      - sciebo-data:/app/config
+    environment:
+      - LOG_LEVEL=INFO
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION_NAME=chatbot-collection
+      - DENSE_MODEL_NAME=jinaai/jina-embeddings-v3
+      - SPARSE_MODEL_NAME=Qdrant/bm25
+      - DATA_DIR=data
+      - CONFIG_DIR=config
+      - MCP_SERVER_NAME=${MCP_SERVER_NAME}
+    depends_on:
+      - qdrant
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -95,5 +140,6 @@ services:
 volumes:
   mongo-data:
   qdrant-data:
-  raw-data:
   sciebo-data:
+  processed_data:
+  moodle-data:
