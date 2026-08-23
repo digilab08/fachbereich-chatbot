@@ -1,0 +1,6 @@
+fastembed==0.8.0
+fastmcp==3.4.7
+markdown-it-py==4.2.0
+numpy==2.5.2
+python-dotenv==1.2.3
+qdrant-client==1.19.0
