@@ -4,7 +4,9 @@
     "docling",
     "embedder",
     "fastembed",
+    "librechat",
     "moodle",
-    "Qdrant"
+    "Qdrant",
+    "sciebo"
   ]
 }
