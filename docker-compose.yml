@@ -8,16 +8,14 @@ services:
       - moodle-data:/files
     labels:
       ofelia.enabled: "true"
-      # Cron-Syntax: Seconds Minutes Hours Day Month Weekday
-      ofelia.job-run.moodle-sync.schedule: "@every 12h"
+      ofelia.job-run.moodle-sync.schedule: "0 3 * * *"
       ofelia.job-run.moodle-sync.container: "moodle-dl"
 
-  # Optional but recomended to store the config csv files.
-  # If you don't want to store them in sciebo, you can remove the volume and and bind the config files directly to the container ETL-Worker and MCP-Server.
+  # Optional but recommended to store the config csv files.
+  # If you don't want to store them in Sciebo, you can remove the volume and and bind the config files directly to the container ETL-Worker and MCP-Server.
   sciebo-sync:
     image: rclone/rclone:latest
     container_name: sciebo-sync
-    restart: unless-stopped
     environment:
       - NC_URL=${NC_URL}
       - NC_USER=${NC_USER}
@@ -31,16 +29,11 @@ services:
         echo "[$(date)] Running initial startup sync..."
         OBSCURED_PASS=$$(rclone obscure "$$NC_PASS")
         rclone sync ":webdav,url='$${NC_URL}',user='$${NC_USER}',pass='$${OBSCURED_PASS}',vendor='owncloud':$${NC_SUBFOLDER}" /data --verbose --create-empty-src-dirs
-        echo "[$(date)] Initial sync finished. Waiting for Ofelia schedule..."
-        sleep infinity
+        echo "[$(date)] Sync finished. Waiting for Ofelia schedule..."
     labels:
       ofelia.enabled: "true"
-      ofelia.job-exec.rclone-sync.schedule: "@every 5m"
-      ofelia.job-exec.rclone-sync.command: >
-        /bin/sh -c "
-        OBSCURED_PASS=$$(rclone obscure \"$$NC_PASS\") &&
-        rclone sync \":webdav,url='$${NC_URL}',user='$${NC_USER}',pass='$${OBSCURED_PASS}',vendor='owncloud':$${NC_SUBFOLDER}\" /data --verbose --create-empty-src-dirs
-        "
+      ofelia.job-run.rclone-sync.schedule: "0 3 * * *"
+      ofelia.job-run.rclone-sync.container: "sciebo-sync"
 
   etl-worker:
     build:
@@ -50,20 +43,29 @@ services:
     volumes:
       - moodle-data:/app/data/moodle
       - sciebo-data:/app/config
-      - processed_data:/app/processed_data
+      - processed-data:/app/processed-data
     environment:
       # Change LOG_LEVEL to DEBUG for more verbose logging
       - LOG_LEVEL=INFO
       - EXTRACTION_CONFIG_PATH=config/extraction_config.csv
       - DATA_PATH=data
-      - PROCESSED_FOLDER_PATH=processed_data
+      - PROCESSED_FOLDER_PATH=processed-data
       - MOODLE_URL=${MOODLE_URL}
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_COLLECTION_NAME=chatbot-collection
     depends_on:
       - qdrant
+    command: >
+      sh -c '
+        echo "[$(date)] Waiting for 15 minutes before starting ETL process..." &&
+        sleep 900 &&
+        echo "[$(date)] Starting ETL process..." &&
+        python src/main.py
+      '
     labels:
       ofelia.enabled: "true"
+      ofelia.job-run.rclone-sync.schedule: "0 3 * * *"
+      ofelia.job-run.rclone-sync.container: "sciebo-sync"
 
   mcp-server:
     build:
@@ -73,7 +75,7 @@ services:
     ports:
       - "9001:9001"
     volumes:
-      - processed_data:/app/data
+      - processed-data:/app/data
       - sciebo-data:/app/config
     environment:
       - LOG_LEVEL=INFO
@@ -141,5 +143,5 @@ volumes:
   mongo-data:
   qdrant-data:
   sciebo-data:
-  processed_data:
+  processed-data:
   moodle-data:
