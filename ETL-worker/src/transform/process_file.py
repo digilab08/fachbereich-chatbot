@@ -121,7 +121,7 @@ class FileProcessor:
 
         # TODO: If .md file check if .url file with the same name exists and if so, read the .url file content and write it to the .md file before proceeding with conversion and skip the .url file processing. This is to ensure that .url files are processed correctly and their content is preserved in the markdown output.
 
-        if file_path.is_file() and file_path.suffix.lower() == ".url":
+        if file_path.is_file() and file_path.suffix.lower() in {".url", ".desktop"}:
             try:
                 content = file_path.read_text(encoding="utf-8")
                 output_path.write_text(content, encoding="utf-8")
