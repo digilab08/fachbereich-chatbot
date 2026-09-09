@@ -82,9 +82,12 @@ def moodle_extract_relevant_files(
         if db_connection is not None:
             try:
                 cursor = db_connection.cursor()
+
+                path_in_moodle_str = str(Path(path_in_moodle))
+                possible_paths = (path_in_moodle_str, f"files/{path_in_moodle_str}", f"/files/{path_in_moodle_str}")
                 result = cursor.execute(
-                    "SELECT course_id, module_id, content_fileurl FROM files WHERE saved_to = ? LIMIT 1",
-                    (str(Path(path_in_moodle)),), # The coma is necessary to make it a tuple
+                    "SELECT course_id, module_id, content_fileurl FROM files WHERE saved_to IN (?, ?, ?) LIMIT 1",
+                    possible_paths,
                 ).fetchone()
 
 
