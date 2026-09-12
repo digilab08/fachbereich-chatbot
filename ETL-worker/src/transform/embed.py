@@ -36,7 +36,7 @@ class Embedder:
     def embed_chunks(
         self,
         chunks: List[Dict[str, Any]],
-        batch_size: int = 32,
+        batch_size: int = 8,
     ) -> None:
         """
         Generate dense and sparse embeddings for the given chunks and attach them
