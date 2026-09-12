@@ -31,6 +31,7 @@ class FileProcessor:
             tokenizer=self.tokenizer,
             max_tokens=1000,
             repeat_table_header=True,
+            merge_peers=True
         )
         self.embedder = Embedder(
             dense_model=self.dense_model,
@@ -40,7 +41,7 @@ class FileProcessor:
         pipeline_options.generate_parsed_pages = False
         self.pdf_options = PdfFormatOption(
             pipeline_options=pipeline_options,
-            document_backend=PyPdfiumDocumentBackend,
+            # document_backend=PyPdfiumDocumentBackend,
         )
         self.pdf_converter = DocumentConverter(
             allowed_formats=[InputFormat.PDF],
@@ -133,9 +134,7 @@ class FileProcessor:
         if docling_conversion is None: return []
         docling_document = docling_conversion.document
 
-        markdown_output = docling_document.export_to_markdown()
-        output_path.write_text(markdown_output, encoding="utf-8")
-        os.utime(output_path, (file_time_stamp, file_time_stamp))
+        logger.debug("Read document with %d pages. Now starting chunking.", len(docling_document.pages))
 
         chunks_iter = self.chunker.chunk(dl_doc=docling_document)
 
@@ -167,8 +166,15 @@ class FileProcessor:
 
         result = list(map(chunk_to_dict, list(chunks_iter)))
 
+        logger.debug("Processed %d chunks for file %s. Now starting embedding process.", len(result), file_path.name)
+
         # Attach dense and sparse embeddings so the load step only persists them
         self.embedder.embed_chunks(result)
+
+        # Export the document to markdown and write it to the output path
+        markdown_output = docling_document.export_to_markdown()
+        output_path.write_text(markdown_output, encoding="utf-8")
+        os.utime(output_path, (file_time_stamp, file_time_stamp))
 
         return result
 
