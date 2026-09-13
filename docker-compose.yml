@@ -12,7 +12,8 @@ services:
       ofelia.job-run.moodle-sync.container: "moodle-dl"
 
   # Optional but recommended to store the config csv files.
-  # If you don't want to store them in Sciebo, you can remove the volume and and bind the config files directly to the container ETL-Worker and MCP-Server.
+  # If you don't want to store them in Sciebo, you can remove the volume and bind the config files directly to the container ETL-Worker and MCP-Server.
+  # For that look at the commented lines in the volumes section of the etl-worker and mcp-server services.
   sciebo-sync:
     image: rclone/rclone:latest
     container_name: sciebo-sync
@@ -42,7 +43,9 @@ services:
     container_name: etl-worker
     volumes:
       - moodle-data:/app/data/moodle
-      - sciebo-data:/app/config
+      - sciebo-data:/app/config:ro
+      # Comment out the previous line and uncomment the next line to use a local config folder instead of Sciebo for testing purposes
+      # - ./sciebo-example-data:/app/config:ro
       - processed-data:/app/processed-data
     environment:
       # Change LOG_LEVEL to DEBUG for more verbose logging
@@ -75,8 +78,10 @@ services:
     ports:
       - "9001:9001"
     volumes:
-      - processed-data:/app/data
-      - sciebo-data:/app/config
+      - processed-data:/app/data:ro
+      - sciebo-data:/app/config:ro
+      # Comment out the previous line and uncomment the next line to use a local config folder instead of Sciebo for testing purposes
+      # - ./sciebo-example-data:/app/config:ro
     environment:
       - LOG_LEVEL=INFO
       - QDRANT_URL=http://qdrant:6333
