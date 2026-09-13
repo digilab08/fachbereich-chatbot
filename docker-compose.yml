@@ -127,11 +127,11 @@ services:
   #   env_file:
   #     - ./LibreChat/.env
   #   environment:
-  #     - HOST=0.0.0.0 # WICHTIG: Das behebt den "Empty Response" Fehler!
+  #     - HOST=0.0.0.0
   #     - PORT=3080
   #     - MONGO_URI=mongodb://mongodb:27017/LibreChat
 
-  #     # Just for testing purposes delete this in production
+      # Just for testing purposes, delete this in production
   #     - NODE_EXTRA_CA_CERTS=/app/key.pem
   #   volumes:
   #     - ./LibreChat/uploads:/app/uploads
